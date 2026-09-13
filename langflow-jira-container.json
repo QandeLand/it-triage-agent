@@ -1,0 +1,310 @@
+[
+    {
+        "Id": "2784b25c7abf177a8bde7ea98c2997b0600cda2dd3d51531298ed95f598779cf",
+        "Created": "2026-09-13T15:52:52.225379624Z",
+        "Path": "langflow",
+        "Args": [
+            "run"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 5967,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-09-13T16:52:44.073510648Z",
+            "FinishedAt": "2026-09-13T16:52:43.26044915Z"
+        },
+        "Image": "sha256:3e3cac657435f292fb5da653e8eb05b330460a99f1420e169f29413ba9d11164",
+        "ResolvConfPath": "/var/lib/docker/containers/2784b25c7abf177a8bde7ea98c2997b0600cda2dd3d51531298ed95f598779cf/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/2784b25c7abf177a8bde7ea98c2997b0600cda2dd3d51531298ed95f598779cf/hostname",
+        "HostsPath": "/var/lib/docker/containers/2784b25c7abf177a8bde7ea98c2997b0600cda2dd3d51531298ed95f598779cf/hosts",
+        "LogPath": "/var/lib/docker/containers/2784b25c7abf177a8bde7ea98c2997b0600cda2dd3d51531298ed95f598779cf/2784b25c7abf177a8bde7ea98c2997b0600cda2dd3d51531298ed95f598779cf-json.log",
+        "Name": "/langflow-jira",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": [
+                "langflow_data:/app/langflow",
+                "/run/desktop/mnt/host/wsl/docker-desktop-bind-mounts/Ubuntu/f38b701291e82c51388bfac88211afd8a1627eca42586c23344d91cef7cf27a9:/app/custom_components:ro"
+            ],
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "bridge",
+            "PortBindings": {
+                "7860/tcp": [
+                    {
+                        "HostIp": "",
+                        "HostPort": "7860"
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                41,
+                156
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "host",
+            "Dns": null,
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": false,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "GraphDriver": {
+            "Data": null,
+            "Name": ""
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/run/desktop/mnt/host/wsl/docker-desktop-bind-mounts/Ubuntu/f38b701291e82c51388bfac88211afd8a1627eca42586c23344d91cef7cf27a9",
+                "Destination": "/app/custom_components",
+                "Mode": "ro",
+                "RW": false,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "volume",
+                "Name": "langflow_data",
+                "Source": "/var/lib/docker/volumes/langflow_data/_data",
+                "Destination": "/app/langflow",
+                "Driver": "local",
+                "Mode": "z",
+                "RW": true,
+                "Propagation": ""
+            }
+        ],
+        "Config": {
+            "Hostname": "2784b25c7abf",
+            "Domainname": "",
+            "User": "user",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "7860/tcp": {},
+                "8080/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "JIRA_API_TOKEN=ATATT3xFfGF081SgYetkChBgk-fricWsG_UkBL6FB90zb0ZQLTkOl6PqOq9ti1YvpdqRDbFP9pB5GJViio8XIfsNOvb4m512uW_bay5Zm5f7FDDNWKCnGFQLkc8-jfzH0uTdzZbSQedeYiYMAKoHwBnZgMfsnEnUmjZjAt5zO4KD6q9A1IjXtwc=D4228FD0",
+                "JIRA_URL=https://qanjav.atlassian.net",
+                "JIRA_EMAIL= qan.jav@gmail.com",
+                "LANGFLOW_AUTO_LOGIN=false",
+                "LANGFLOW_SUPERUSER_PASSWORD=Ideas50ideas",
+                "LANGFLOW_HOST=0.0.0.0",
+                "LANGFLOW_PORT=7860",
+                "LANGFLOW_COMPONENTS_PATH=/app/custom_components",
+                "container=oci",
+                "PYTHON_VERSION=3.14",
+                "PYTHONUNBUFFERED=1",
+                "PYTHONIOENCODING=UTF-8",
+                "LC_ALL=en_US.UTF-8",
+                "LANG=en_US.UTF-8",
+                "CNB_STACK_ID=com.redhat.stacks.ubi10-python-314",
+                "CNB_USER_ID=1001",
+                "CNB_GROUP_ID=0",
+                "PIP_NO_CACHE_DIR=off",
+                "STI_SCRIPTS_PATH=/usr/libexec/s2i",
+                "APP_ROOT=/opt/app-root",
+                "HOME=/app/data",
+                "PLATFORM=el10",
+                "PATH=/app/.venv/bin:/opt/app-root/bin:/opt/app-root/src/bin:/opt/app-root/src/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "BASH_ENV=",
+                "ENV=",
+                "PROMPT_COMMAND=",
+                "SUMMARY=Minimal platform for building and running Python 3.14 applications",
+                "DESCRIPTION=Python 3.14 available as container is a base platform for building and running various Python 3.14 applications and frameworks. Python is an easy to learn, powerful programming language. It has efficient high-level data structures and a simple but effective approach to object-oriented programming. Python's elegant syntax and dynamic typing, together with its interpreted nature, make it an ideal language for scripting and rapid application development in many areas on most platforms.",
+                "NPM_CONFIG_CACHE=/app/.npm"
+            ],
+            "Cmd": [
+                "langflow",
+                "run"
+            ],
+            "Image": "langflowai/langflow:latest",
+            "Volumes": null,
+            "WorkingDir": "/app",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": {
+                "architecture": "x86_64",
+                "build-date": "2026-08-31T15:45:12Z",
+                "com.redhat.component": "python-314-container",
+                "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+                "cpe": "cpe:/o:redhat:enterprise_linux:10.2",
+                "description": "Python 3.14 available as container is a base platform for building and running various Python 3.14 applications and frameworks. Python is an easy to learn, powerful programming language. It has efficient high-level data structures and a simple but effective approach to object-oriented programming. Python's elegant syntax and dynamic typing, together with its interpreted nature, make it an ideal language for scripting and rapid application development in many areas on most platforms.",
+                "desktop.docker.io/wsl-distro": "Ubuntu",
+                "distribution-scope": "public",
+                "io.buildah.version": "1.44.0",
+                "io.buildpacks.stack.id": "com.redhat.stacks.ubi10-python-314-minimal",
+                "io.k8s.description": "Python 3.14 available as container is a base platform for building and running various Python 3.14 applications and frameworks. Python is an easy to learn, powerful programming language. It has efficient high-level data structures and a simple but effective approach to object-oriented programming. Python's elegant syntax and dynamic typing, together with its interpreted nature, make it an ideal language for scripting and rapid application development in many areas on most platforms.",
+                "io.k8s.display-name": "Python 3.14",
+                "io.openshift.expose-services": "8080:http",
+                "io.openshift.tags": "builder,python,python314,python-314,rh-python314",
+                "maintainer": "SoftwareCollections.org \u003csclorg@redhat.com\u003e",
+                "name": "ubi10/python-314-minimal",
+                "org.opencontainers.image.authors": "[Langflow]",
+                "org.opencontainers.image.created": "2026-08-31T15:45:12Z",
+                "org.opencontainers.image.licenses": "MIT",
+                "org.opencontainers.image.revision": "24cf6b826875c440c05d5f7854b6392dcdc5f435",
+                "org.opencontainers.image.source": "https://github.com/langflow-ai/langflow",
+                "org.opencontainers.image.title": "langflow",
+                "org.opencontainers.image.url": "https://github.com/langflow-ai/langflow",
+                "release": "1788191076",
+                "summary": "Minimal platform for building and running Python 3.14 applications",
+                "url": "https://catalog.redhat.com/en/search?searchType=containers",
+                "usage": "s2i build https://github.com/sclorg/s2i-python-container.git --context-dir=3.14-minimal/test/setup-test-app/ ubi10/python-314-minimal python-sample-app",
+                "vcs-ref": "24cf6b826875c440c05d5f7854b6392dcdc5f435",
+                "vcs-type": "git",
+                "vendor": "Red Hat, Inc.",
+                "version": "10.2"
+            },
+            "StopTimeout": 1
+        },
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "e9505d6e23d7b2e60f35fbf8f0ccdf236a9674372d9fc2f42a20b546efe67f55",
+            "SandboxKey": "/var/run/docker/netns/e9505d6e23d7",
+            "Ports": {
+                "7860/tcp": [
+                    {
+                        "HostIp": "0.0.0.0",
+                        "HostPort": "7860"
+                    },
+                    {
+                        "HostIp": "::",
+                        "HostPort": "7860"
+                    }
+                ]
+            },
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "",
+            "Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "",
+            "IPPrefixLen": 0,
+            "IPv6Gateway": "",
+            "MacAddress": "",
+            "Networks": {
+                "bridge": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "MacAddress": "da:01:86:65:17:ec",
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "aff0485b6c244170301f37a24ec3faf1daaf1ae947f669e04cc2088eaa9deccb",
+                    "EndpointID": "e3c837eb93f0ece7c85b050047a002c6e9a64075a4010c0d9cf097c1dc1fc302",
+                    "Gateway": "172.17.0.1",
+                    "IPAddress": "172.17.0.2",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": null
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:ebb38ea83b144e6421cbb5fa0c0499721e17f6b7407df76a16c41247b0d1ed57",
+            "size": 2968,
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    }
+]
