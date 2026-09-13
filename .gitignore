@@ -1,0 +1,9 @@
+# Secrets
+.env
+*.env
+secrets/
+credentials*
+
+# OS / editor
+.DS_Store
+*.swp
