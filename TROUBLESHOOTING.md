@@ -4,19 +4,19 @@ Real issues encountered while building this project, how they were diagnosed, an
 
 | # | Issue | Severity |
 |---|---|---|
-| [1](#1-jiraslacksupabase-integration-generic-api-request-failed-in-agent-tool-mode) | Generic API Request failed in Agent Tool Mode | 🔴 Critical |
-| [2](#2-lost-the-entire-wired-flow-after-a-database-swap) | Lost the entire wired flow after a database swap | 🔴 Critical |
-| [3](#3-langflow-ui-showed-create-your-first-flow-despite-existing-flows) | UI showed "Create your first flow" despite existing data | 🟠 High |
-| [4](#4-custom-components-not-showing-up-in-the-sidebar) | Custom components not showing up in the sidebar | 🟠 High |
-| [5](#5-supabase-rest-api-returned-42501-permission-denied) | Supabase REST API returned `42501: permission denied` | 🟡 Medium |
-| [6](#6-langflow-container-failed-to-start) | Langflow container failed to start | 🟡 Medium |
-| [7](#7-architecture-decision-replaced-rag-with-agentic-file-reading) | Replaced RAG with agentic file reading | 🔵 Design decision |
+| [1](#1-jiraslacksupabase-integration-generic-api-request-failed-in-agent-tool-mode) | Generic API Request failed in Agent Tool Mode | Critical |
+| [2](#2-lost-the-entire-wired-flow-after-a-database-swap) | Lost the entire wired flow after a database swap | Critical |
+| [3](#3-langflow-ui-showed-create-your-first-flow-despite-existing-flows) | UI showed "Create your first flow" despite existing data | High |
+| [4](#4-custom-components-not-showing-up-in-the-sidebar) | Custom components not showing up in the sidebar | High |
+| [5](#5-supabase-rest-api-returned-42501-permission-denied) | Supabase REST API returned `42501: permission denied` | Medium |
+| [6](#6-langflow-container-failed-to-start) | Langflow container failed to start | Medium |
+| [7](#7-architecture-decision-replaced-rag-with-agentic-file-reading) | Replaced RAG with agentic file reading | Design decision |
 
 ---
 
 ## 1. Jira/Slack/Supabase integration: generic API Request failed in Agent Tool Mode
 
-**Severity: 🔴 Critical — the single most time-consuming issue in the build.**
+**Severity: Critical — the single most time-consuming issue in the build.**
 
 The problem affected every external integration: the generic `API Request` component worked correctly when executed standalone, but failed once it was exposed to the Agent as a Tool.
 
@@ -24,7 +24,7 @@ The problem affected every external integration: the generic `API Request` compo
 The Jira REST endpoint, and separately the Supabase REST endpoint, were configured using the component's URL and authentication/header fields.
 
 - Worked correctly when executed by itself
-- Once connected to the Agent as a Tool, the Agent reported it had **no credentials** for the service — despite them being visibly configured inside the component
+- Once connected to the Agent as a Tool, the Agent reported it had no credentials for the service — despite them being visibly configured inside the component
 
 ### Attempt 2 — API Request component, cURL mode
 A complete cURL command was supplied instead:
@@ -36,7 +36,7 @@ Same result:
 - Worked standalone
 - Failed through Agent Tool Mode — auth information wasn't reliably available during the tool call
 
-A separate parsing bug was also found here: a multi-line command using `\` line continuations was misread, with everything after the first `\` appended onto the URL. Rewriting it as a single unbroken line fixed the parsing, but **not** the underlying Tool Mode auth problem.
+A separate parsing bug was also found here: a multi-line command using `\` line continuations was misread, with everything after the first `\` appended onto the URL. Rewriting it as a single unbroken line fixed the parsing, but not the underlying Tool Mode auth problem.
 
 ### Attempt 3 — Python Interpreter component
 Tried Langflow's built-in `Python Interpreter` (`RUN_PYTHON_REPL`) to execute the Jira request as inline Python, hoping to bypass whatever was stripping auth in Tool Mode.
@@ -45,9 +45,9 @@ Tried Langflow's built-in `Python Interpreter` (`RUN_PYTHON_REPL`) to execute th
 - Did not solve the credential-passing problem either
 
 ### Diagnosis
-The issue was determined to be how the generic `API Request` component behaves when exposed as an Agent Tool: authentication configured directly on the component isn't reliably available when the LLM invokes it through the tool layer. **This was not an incorrect credential** for Jira, Slack, or Supabase individually — it was structural.
+The issue was determined to be how the generic `API Request` component behaves when exposed as an Agent Tool: authentication configured directly on the component isn't reliably available when the LLM invokes it through the tool layer. This was not an incorrect credential for Jira, Slack, or Supabase individually — it was structural.
 
-### ✅ Fix — dedicated custom Langflow components
+### Fix — dedicated custom Langflow components
 The generic `API Request` approach was abandoned entirely. Dedicated Python components were written under:
 ```
 custom_components/tools/
@@ -58,8 +58,8 @@ custom_components/tools/
 
 Each custom component:
 - Uses Langflow's `langflow.custom.Component`
-- Exposes **only** meaningful inputs to the LLM, marked `tool_mode=True`
-- Reads credentials directly from environment variables **inside** the component — never exposed through the tool schema
+- Exposes only meaningful inputs to the LLM, marked `tool_mode=True`
+- Reads credentials directly from environment variables inside the component — never exposed through the tool schema
 - Returns a structured `Data` object with a clear success/failure result
 
 The Agent only ever sees a clean interface, e.g.:
@@ -75,11 +75,27 @@ The LLM never receives the actual credentials or auth configuration — there's 
 
 ## 2. Lost the entire wired flow after a database swap
 
-**Severity: 🔴 Critical — real data loss.**
+**Severity: Critical — real data loss.**
 
 While troubleshooting an unrelated login issue, the Langflow SQLite database was replaced with an older backup to try to recover a different problem. After restoring it, the actual IT Triage Agent flow was gone.
 
-Every backup checked — `langflow.db.backup`, a `.tar.gz` archive, and a separate `langflow_data_backup/` directory — contained only the default, unmodified "Simple Agent" starter template, not the completed flow with Jira/Slack/Supabase tools connected.
+### Backup investigation
+Several backup files existed from earlier sessions: `langflow.db.backup`, `langflow_app_data_backup.tar.gz`, and a separate `langflow_data_backup/` directory. Each was checked in turn before assuming the work was unrecoverable.
+
+On Docker Desktop with WSL2, the volume's files aren't directly accessible from the host filesystem the way they would be on native Linux:
+```bash
+sudo ls -la /var/lib/docker/volumes/langflow_data/_data/
+# ls: cannot access '/var/lib/docker/volumes/langflow_data/_data/': No such file or directory
+```
+`docker cp` had to be used instead to inspect backups without risking the currently running state. To check a backup's contents *without* overwriting the live database, it was copied into the container under a different filename first:
+```bash
+docker cp ./langflow.db.backup langflow-jira:/app/langflow/langflow.db.test
+
+docker exec langflow-jira python -c "import sqlite3; c=sqlite3.connect('/app/langflow/langflow.db.test'); print(c.execute(\"SELECT id, name, user_id FROM flow WHERE user_id IS NOT NULL\").fetchall()); c.close()"
+```
+This is the safer pattern: verify what a backup actually contains before committing to a restore, since restoring the wrong one just compounds the problem.
+
+Every backup checked this way — `langflow.db.backup`, the `.tar.gz` archive, and `langflow_data_backup/` — turned out to contain only the default, unmodified "Simple Agent" starter template, not the actual flow with the Jira/Slack/Supabase tools wired in.
 
 ### Impact
 The complete visual wiring of the Agent had to be rebuilt from scratch:
@@ -96,20 +112,20 @@ The custom Python components (`custom_components/tools/`) were stored separately
 ### Lesson
 Langflow's internal SQLite database should not be treated as the only source of truth for important flow configuration.
 
-### ✅ Process fix adopted
+### Process fix adopted
 - Export important flows to JSON regularly and store them in the repo (`flows/it-triage-agent-flow.json`)
-- Take dated snapshots of a working `langflow.db` after major milestones
+- Take dated snapshots of a working `langflow.db` after major milestones, using `docker cp` rather than trying to access the volume directly
 - Keep database backups separate from ordinary source-code backups
-- Treat anything that only exists inside a running container as **ephemeral** until it's been exported or version-controlled
+- Treat anything that only exists inside a running container as ephemeral until it's been exported or version-controlled
 
 ---
 
 ## 3. Langflow UI showed "Create your first flow" despite existing flows
 
-**Severity: 🟠 High.**
+**Severity: High.**
 
 ### Symptom
-Opening `http://localhost:7860` showed the user already logged in, but the UI displayed **"Create your first flow"** even though the SQLite database contained existing flows.
+Opening `http://localhost:7860` showed the user already logged in, but the UI displayed "Create your first flow" even though the SQLite database contained existing flows.
 
 ### Investigation
 Authentication was ruled out early since the session was already active. Instead of deleting data or recreating the environment, the database was inspected directly:
@@ -124,14 +140,14 @@ docker exec langflow-jira python -c "import sqlite3; c=sqlite3.connect('/app/lan
 ### Diagnosis
 The flows had not disappeared and this was not an authentication problem — the UI's project/folder context needed to be examined rather than assumed broken.
 
-### ✅ Result
-The project/folder and flow relationship was investigated and corrected **without** deleting existing project data or recreating the Docker volume — preserving the existing work.
+### Result
+The project/folder and flow relationship was investigated and corrected without deleting existing project data or recreating the Docker volume — preserving the existing work.
 
 ---
 
 ## 4. Custom components not showing up in the sidebar
 
-**Severity: 🟠 High.**
+**Severity: High.**
 
 ### Symptom
 `custom_components/` was correctly mounted into the container, confirmed via:
@@ -147,9 +163,9 @@ docker exec langflow-jira env | grep -i LANGFLOW_COMPONENTS
 ```
 
 ### Root cause
-Mounting the directory isn't enough — Langflow needs to be explicitly told where to look. Setting `LANGFLOW_COMPONENTS_PATH` as a plain environment variable **did not work** in this version, despite appearing in some documentation.
+Mounting the directory isn't enough — Langflow needs to be explicitly told where to look. Setting `LANGFLOW_COMPONENTS_PATH` as a plain environment variable did not work in this version, despite appearing in some documentation.
 
-### ✅ Fix
+### Fix
 Checked the actual CLI options:
 ```bash
 langflow run --help
@@ -172,7 +188,7 @@ docker run -d \
 
 ## 5. Supabase REST API returned `42501: permission denied`
 
-**Severity: 🟡 Medium.**
+**Severity: Medium.**
 
 ### Symptom
 Requests to `/rest/v1/incidents` returned:
@@ -182,9 +198,9 @@ Requests to `/rest/v1/incidents` returned:
 The table existed and Row Level Security policies appeared correctly configured (`Allow public read access`, `Allow service role access`).
 
 ### Root cause
-RLS policies and PostgreSQL table privileges are **separate permission layers**. Having an appropriate RLS policy does not automatically grant the underlying role the required table privilege — `service_role` also needed an explicit grant.
+RLS policies and PostgreSQL table privileges are separate permission layers. Having an appropriate RLS policy does not automatically grant the underlying role the required table privilege — `service_role` also needed an explicit grant.
 
-### ✅ Fix
+### Fix
 ```sql
 GRANT SELECT ON public.incidents TO service_role;
 ```
@@ -202,7 +218,7 @@ Supabase's SQL Editor intermittently returned `Backend error! Retry your query` 
 
 ## 6. Langflow container failed to start
 
-**Severity: 🟡 Medium.**
+**Severity: Medium.**
 
 ### Error
 ```
@@ -215,7 +231,7 @@ Worker (pid:18) exited with code 3.
 ### Cause
 `.env` had `LANGFLOW_AUTO_LOGIN=false` but `LANGFLOW_SUPERUSER_PASSWORD` was empty. When auto-login is disabled, Langflow requires valid superuser credentials.
 
-### ✅ Fix
+### Fix
 ```
 LANGFLOW_AUTO_LOGIN=false
 LANGFLOW_SUPERUSER=langflow
@@ -223,7 +239,7 @@ LANGFLOW_SUPERUSER_PASSWORD=<a real password>
 ```
 
 ### Important Docker detail
-Updating `.env` does **not** automatically update an already-created container — it must be removed and recreated:
+Updating `.env` does not automatically update an already-created container — it must be removed and recreated:
 ```bash
 docker rm -f langflow-jira
 # then start again with the updated .env
@@ -235,7 +251,7 @@ docker rm -f langflow-jira
 
 ## 7. Architecture decision: replaced RAG with agentic file reading
 
-**Category: 🔵 Design decision, not a bug.**
+**Category: Design decision, not a bug.**
 
 ### Problem
 The original plan was a traditional RAG/vector-search knowledge base for runbooks and postmortems — which required an embedding model provider.
@@ -245,8 +261,8 @@ The original plan was a traditional RAG/vector-search knowledge base for runbook
 - HuggingFace's inference API was not suitable for the required embedding workflow
 - Self-hosting Ollama with `nomic-embed-text` was considered, but introduced Docker-to-host networking complexity: a container can't reach a host service via `localhost`, requiring `--add-host=host.docker.internal:host-gateway` plus additional Langflow SSRF allow-list configuration
 
-### ✅ Architectural decision
-The knowledge base contained only a small, static set of documents. Rather than introduce a full embedding/vector-search pipeline, the architecture was simplified to **agentic file reading** — the Agent calls a `Read File` tool on demand.
+### Architectural decision
+The knowledge base contained only a small, static set of documents. Rather than introduce a full embedding/vector-search pipeline, the architecture was simplified to agentic file reading — the Agent calls a `Read File` tool on demand.
 
 ### Reasoning
 For a small number of static documents, this approach:
