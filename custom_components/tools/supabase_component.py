@@ -8,7 +8,9 @@ from langflow.schema import Data
 
 class SupabaseIncidentHistoryTool(Component):
     display_name = "Supabase Incident History"
-    description = "Searches Supabase for historical IT incidents matching a service."
+    description = (
+        "Searches Supabase for historical IT incidents matching a service."
+    )
     icon = "Database"
     name = "SupabaseIncidentHistoryTool"
 
@@ -37,16 +39,14 @@ class SupabaseIncidentHistoryTool(Component):
             raise RuntimeError("SUPABASE_URL is not configured.")
 
         if not supabase_key:
-            raise RuntimeError("SUPABASE_SERVICE_ROLE_KEY is not configured.")
+            raise RuntimeError(
+                "SUPABASE_SERVICE_ROLE_KEY is not configured."
+            )
 
-        # Expected table:
-        # incidents
-        #
-        # Expected columns:
-        # service, severity, environment, description, created_at
-        #
-        # If your table/columns are different, we will adjust this
-        # after testing the connection.
+        service = str(self.service).strip()
+
+        if not service:
+            raise ValueError("Service name cannot be empty.")
 
         response = requests.get(
             f"{supabase_url.rstrip('/')}/rest/v1/incidents",
@@ -56,8 +56,8 @@ class SupabaseIncidentHistoryTool(Component):
                 "Accept": "application/json",
             },
             params={
-                "service": f"eq.{self.service.strip()}",
-                "order": "created_at.desc",
+                "service_name": f"eq.{service}",
+                "order": "incident_timestamp.desc",
                 "limit": "10",
             },
             timeout=20,
@@ -74,7 +74,7 @@ class SupabaseIncidentHistoryTool(Component):
         return Data(
             data={
                 "success": True,
-                "service": self.service.strip(),
+                "service": service,
                 "incident_count": len(incidents),
                 "incidents": incidents,
             }
