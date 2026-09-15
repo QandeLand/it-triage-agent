@@ -7,3 +7,27 @@ credentials*
 # OS / editor
 .DS_Store
 *.swp
+.env.langflow
+
+# Langflow DBs — never commit, contain secrets
+*.db
+*.db.*
+langflow.db*
+langflow_data_*.tar.gz
+langflow_data_backup*
+langflow_app_data_backup*
+
+# Env files with secrets
+.env
+.env.*
+.env.langflow
+
+# Backups
+backups/
+*.bak
+
+# Python
+__pycache__/
+*.pyc
+
+# Runtime
