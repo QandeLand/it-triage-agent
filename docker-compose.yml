@@ -1,0 +1,12 @@
+services:
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    image: it-triage-agent:latest
+    container_name: it-triage-agent
+    ports:
+      - "5000:5000"
+    environment:
+      - ENV=local
+    restart: unless-stopped
