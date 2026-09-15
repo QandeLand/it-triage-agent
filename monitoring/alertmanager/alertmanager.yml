@@ -1,0 +1,28 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: default
+  group_by: ["alertname", "service"]
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 4h
+  routes:
+    - matchers:
+        - severity =~ "P1|P2"
+      receiver: langflow-webhook
+      continue: true
+    - matchers:
+        - severity =~ "P3|P4"
+      receiver: default
+
+receivers:
+  - name: default
+    webhook_configs:
+      - url: "http://app:5000/webhook"
+        send_resolved: true
+
+  - name: langflow-webhook
+    webhook_configs:
+      - url: "http://app:5000/webhook"
+        send_resolved: true

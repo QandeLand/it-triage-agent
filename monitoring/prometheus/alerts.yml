@@ -1,0 +1,33 @@
+groups:
+  - name: payment-service-slo
+    interval: 15s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(app_errors_total{job="payment-service"}[5m]))
+            /
+          sum(rate(app_requests_total{job="payment-service"}[5m]))
+            > 0.05
+        for: 1m
+        labels:
+          severity: P2
+          service: payment-service
+          environment: production
+        annotations:
+          summary: "Error rate > 5% on {{ $labels.service }}"
+          description: "{{ $labels.service }} has had a >5% error rate for 1 minute."
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(app_request_latency_seconds_bucket{job="payment-service"}[5m])) by (le)
+          ) > 1.0
+        for: 2m
+        labels:
+          severity: P3
+          service: payment-service
+          environment: production
+        annotations:
+          summary: "p95 latency > 1s on {{ $labels.service }}"
+          description: "{{ $labels.service }} p95 latency above 1s for 2 minutes."
