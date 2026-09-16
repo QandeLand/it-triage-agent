@@ -4,7 +4,6 @@
 [![Container](https://img.shields.io/badge/ghcr.io-it--triage--agent-blue?logo=docker&logoColor=white)](https://github.com/QandeLand/it-triage-agent/pkgs/container/it-triage-agent)
 [![Python](https://img.shields.io/badge/python-3.12-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Docker](https://img.shields.io/badge/docker-multi--stage-2496ED?logo=docker&logoColor=white)](./app/Dockerfile)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](#)
 
 An end-to-end incident response system that ingests alerts, triages them with an LLM agent, and **acts only when warranted** — opening a Jira ticket and paging Slack for real production incidents, staying silent on staging noise.
 
@@ -18,6 +17,7 @@ Combines a **containerized Flask webhook/metrics service**, a **self-hosted Lang
 - [Architecture](#architecture)
 - [Tech stack](#tech-stack)
 - [Quick start (local dev)](#quick-start-local-dev)
+- [Running the full stack](#running-the-full-stack)
 - [Setting up the AI agent](#setting-up-the-ai-agent)
 - [CI/CD pipeline](#cicd-pipeline)
 - [Observability](#observability)
@@ -46,7 +46,7 @@ This mirrors how a real NOC / on-call workflow should behave — escalate what m
 
 ## Architecture
 
-\```
+```
 ┌──────────────────────┐
 │   Alert source        │
 │ (Prometheus, etc.)    │
@@ -72,7 +72,7 @@ This mirrors how a real NOC / on-call workflow should behave — escalate what m
 └─────────┘ └─────────────┘ └──────────────┘
 
 Prometheus ──scrape──▶ /metrics on the Flask app
-\```
+```
 
 Two services, one system:
 
@@ -81,7 +81,7 @@ Two services, one system:
 | **Ingress** | Flask app (`app/`) | Receives alerts, exposes `/health` and Prometheus `/metrics` |
 | **Reasoning** | Langflow agent (`flows/`, `custom_components/`) | Classifies severity, queries history, decides action |
 | **Action** | Jira + Slack custom tools | Creates tickets, sends alerts |
-| **Observability** | Prometheus + (Grafana) | Scrapes the Flask app, visualizes pipeline health |
+| **Observability** | Prometheus + (Grafana planned) | Scrapes the Flask app, visualizes pipeline health |
 | **Delivery** | GitHub Actions → GHCR | Tests, builds, publishes the container image |
 
 Each Langflow tool is a native custom Python component (not a generic HTTP block) — see [Engineering challenges](#engineering-challenges-solved) for why.
@@ -93,7 +93,7 @@ Each Langflow tool is a native custom Python component (not a generic HTTP block
 | Layer | Tool |
 |---|---|
 | Agent orchestration | Langflow (self-hosted, Docker) |
-| LLM | Groq (`openai/gpt-oss-120b`, OpenAI-compatible API) |
+| LLM | Groq (`openai/gpt-oss-20b`, OpenAI-compatible API) |
 | Historical data | Supabase (Postgres) |
 | Ticketing | Jira Cloud REST API v3 |
 | Alerting | Slack Incoming Webhooks |
@@ -111,7 +111,7 @@ Each Langflow tool is a native custom Python component (not a generic HTTP block
 
 **Prerequisites:** Docker, Docker Compose.
 
-\```bash
+```bash
 git clone https://github.com/QandeLand/it-triage-agent.git
 cd it-triage-agent
 cp .env.example .env
@@ -121,28 +121,65 @@ cp .env.example .env
 docker compose up --build -d
 
 # Verify
-docker compose ps                      # STATUS should say (healthy)
-curl localhost:5000/health             # {"status":"ok"}
+docker compose ps       # STATUS should say (healthy)
+curl localhost:5000/health        # {"status":"ok"}
 curl localhost:5000/metrics | head
-\```
+```
 
 To pull and run the published image instead of building locally:
 
-\```bash
+```bash
 echo $GITHUB_TOKEN | docker login ghcr.io -u QandeLand --password-stdin
 docker pull ghcr.io/qandeland/it-triage-agent:latest
 docker run --rm -d -p 5000:5000 --name triage ghcr.io/qandeland/it-triage-agent:latest
 curl localhost:5000/health
-\```
+```
 
 Run the tests locally in a venv (Debian/Ubuntu block system pip — PEP 668):
 
-\```bash
+```bash
 cd app
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt pytest
 python -m pytest -v
-\```
+```
+
+---
+
+## Running the full stack
+
+Bring up the app **and** the Prometheus monitoring stack in one command:
+
+```bash
+./scripts/start-monitoring.sh
+```
+
+This script:
+
+1. Starts the Flask app via `docker compose` (which creates the `it-triage-agent_default` network)
+2. Starts Prometheus attached to that same network, so it can resolve the app by service name (`app:5000`)
+
+**Verify everything is up:**
+
+```bash
+curl localhost:5000/health      # {"status":"ok"}
+curl localhost:5000/metrics | head      # Prometheus exposition format
+
+# Check Prometheus is scraping
+curl -s http://localhost:9090/api/v1/targets | \
+  python3 -c "import sys,json; d=json.load(sys.stdin); [print(t['labels'].get('job'), '->', t['health']) for t in d['data']['activeTargets']]"
+```
+
+Expected output:
+
+```
+payment-service -> up
+prometheus -> up
+```
+
+Then open `http://localhost:9090/targets` — both targets should show **UP**.
+
+> **Note on networking:** Prometheus must be attached to the same Docker network as the Flask app (`it-triage-agent_default`), otherwise it can't resolve the `app` service name. This is why the script uses `--network it-triage-agent_default` instead of `--add-host=host.docker.internal`.
 
 ---
 
@@ -150,7 +187,7 @@ python -m pytest -v
 
 ### 1. Run Langflow with the custom components mounted
 
-\```bash
+```bash
 docker run -d \
   --name langflow-jira \
   -p 7860:7860 \
@@ -159,9 +196,9 @@ docker run -d \
   --mount type=bind,source="$(pwd)/custom_components",target=/app/custom_components,readonly \
   langflowai/langflow:latest \
   langflow run --components-path /app/custom_components
-\```
+```
 
-> ⚠️ The `--components-path` flag (or recreating the container with it) is required — mounting alone does not make Langflow discover custom components.
+> The `--components-path` flag (or recreating the container with it) is required — mounting alone does not make Langflow discover custom components.
 
 ### 2. Open Langflow
 
@@ -169,18 +206,32 @@ http://localhost:7860
 
 Log in with `LANGFLOW_SUPERUSER` / `LANGFLOW_SUPERUSER_PASSWORD` from `.env`.
 
-### 3. Load the flow
+### 3. Build the flow
 
-Import `flows/it-triage-agent-flow.json`, or rebuild from scratch:
+Create a **Blank Flow** in the UI and add these nodes:
 
-- Add an **Agent**, set the Language Model to **Groq** (OpenAI-compatible, base URL `https://api.groq.com/openai/v1`)
-- Add the **Jira Ticket Tool**, **Slack Notification**, and **Supabase Incident History** components (auto-discovered from `custom_components/`)
-- Connect all three to the Agent's **Tools** input
-- Wire **Chat Input → Agent → Chat Output**
+- **Chat Input**
+- **Chat Output**
+- **Agent** — set the Language Model to `OpenAI Compatible` → `openai/gpt-oss-20b`, base URL `https://api.groq.com/openai/v1`, and API key from `.env`
+- **Jira Ticket Tool**, **Slack Notification**, **Supabase Incident History** — search for these in the sidebar; they're auto-discovered from `custom_components/`
+
+Paste the agent system prompt from `docs/agent-prompt.txt` into the Agent's **Agent Instructions** field.
+
+**Wire the connections:**
+
+| From | To |
+|---|---|
+| Chat Input → message | Agent → Input |
+| Jira Ticket Tool → Toolset | Agent → Tools |
+| Slack Notification → Toolset | Agent → Tools |
+| Supabase Incident History → Toolset | Agent → Tools |
+| Agent → Response | Chat Output → Inputs |
+
+> **Note:** Langflow flows are **not portable across Langflow versions**. The DB is a cache — always export the flow to JSON (`flows/it-triage-agent-flow.json`) after any change and commit it to git. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for the full story.
 
 ### 4. Supabase schema
 
-\```sql
+```sql
 CREATE TABLE incidents (
     id SERIAL PRIMARY KEY,
     service_name TEXT NOT NULL,
@@ -193,7 +244,7 @@ CREATE TABLE incidents (
     resolved BOOLEAN DEFAULT TRUE,
     resolution_minutes INTEGER
 );
-\```
+```
 
 ---
 
@@ -201,7 +252,7 @@ CREATE TABLE incidents (
 
 GitHub Actions workflow: `.github/workflows/ci.yml`
 
-\```
+```
 push / PR to main
        │
        ▼
@@ -221,12 +272,12 @@ push / PR to main
            ▼
   ghcr.io/qandeland/it-triage-agent:latest
   ghcr.io/qandeland/it-triage-agent:sha-<commit>
-\```
+```
 
 Design decisions:
 
 - **`needs: test`** — the image is never built from code that fails tests.
-- **No long-lived secrets** — uses the auto-provisioned `GITHUB_TOKEN` with scoped permissions: `packages: write`. No PAT to rotate.
+- **No long-lived secrets** — uses the auto-provisioned `GITHUB_TOKEN` with scoped `permissions: packages: write`. No PAT to rotate.
 - **Multi-tag strategy** — `latest` for convenience, `sha-<commit>` for immutable traceability. Any running container maps back to a commit.
 - **PR vs main** — PRs build the image (`push: false`) to catch Dockerfile regressions, but only `main` publishes.
 - **Layer cache via `type=gha`** — repeat runs drop from ~45s to a few seconds.
@@ -237,26 +288,36 @@ Verified end-to-end: the published image was pulled locally and answered `{"stat
 
 ## Observability
 
-The Flask app exposes Prometheus metrics at `/metrics` using the `prometheus-client` library. A local Prometheus instance (`prometheus-demo` container) scrapes it automatically.
+The Flask app exposes Prometheus metrics at `/metrics` using the `prometheus-client` library. A local Prometheus instance (`prometheus-demo` container) scrapes it every 15 seconds.
 
-\```bash
+```bash
 # Confirm metrics are live
 curl localhost:5000/metrics | head
 
-# Prometheus UI
+# Check Prometheus targets
+curl -s http://localhost:9090/api/v1/targets | \
+  python3 -c "import sys,json; d=json.load(sys.stdin); [print(t['labels'].get('job'), '->', t['health']) for t in d['data']['activeTargets']]"
+
+# Open the Prometheus UI
 open http://localhost:9090
-\```
+```
 
-Custom metric exposed by the app:
+Prometheus is attached to the compose network (`it-triage-agent_default`) so it resolves the app by service name. The config is in `monitoring/prometheus/prometheus.yml`:
 
-\```
-# HELP app_requests_total Total HTTP requests handled
-# TYPE app_requests_total counter
-app_requests_total{method="GET",endpoint="/health"} 42.0
-\```
-<!-- VERIFY: adjust the metric name/help text to match app.py -->
+```yaml
+scrape_configs:
+  - job_name: payment-service
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["app:5000"]
+        labels:
+          service: payment-service
+          environment: production
+```
 
-Grafana is planned as the next step for visualization. <!-- VERIFY: remove if not planned -->
+Alert rules and Alertmanager config are also present in `monitoring/` (rule file: `alerts.yml`; Alertmanager targets `alertmanager:9093`).
+
+Grafana provisioning scaffolding exists in `monitoring/grafana/provisioning/` — dashboards are the next step.
 
 ---
 
@@ -264,7 +325,7 @@ Grafana is planned as the next step for visualization. <!-- VERIFY: remove if no
 
 See `.env.example` for the full list. Never commit a real `.env` — it's gitignored.
 
-\```env
+```env
 JIRA_URL=
 JIRA_EMAIL=
 JIRA_API_TOKEN=
@@ -274,35 +335,36 @@ SUPABASE_SERVICE_ROLE_KEY=
 LANGFLOW_AUTO_LOGIN=false
 LANGFLOW_SUPERUSER=
 LANGFLOW_SUPERUSER_PASSWORD=
-\```
+GROQ_API_KEY=
+```
 
 ---
 
 ## Example runs
 
-### Production P1 — triggers automation ✅
+### Production P1 — triggers automation 
 
 > "Production payments-api is returning 35% HTTP 500 errors for the last 10 minutes. The normal error rate is below 1%. Customers are currently unable to complete payments."
 
-\```
+```
 Severity:            P1 (Critical)
 Environment:         production
-Confidence:          100%
+Confidence:          High
 Historical pattern:  No prior incidents for payments-api in the historical database.
-Action taken:        Jira ticket SCRUM-16 created and Slack notification sent.
-\```
+Action taken:        Jira ticket SCRUM-17 created and Slack notification sent.
+```
 
-### Staging noise — correctly takes no action ✅
+### Staging noise — correctly takes no action 
 
 > "Staging payments-api briefly returned 3 HTTP 500 errors during a deployment. The service recovered automatically and no customers were affected."
 
-\```
+```
 Severity:            P4 (Low)
 Environment:         non-production (staging)
 Confidence:          High
 Historical pattern:  No matching incidents in the Supabase history.
 Action taken:        No action (no Jira ticket, no Slack notification).
-\```
+```
 
 ---
 
@@ -313,7 +375,9 @@ Action taken:        No action (no Jira ticket, no Slack notification).
 - Docker networking: connecting a host-installed Ollama instance to a containerized Langflow required `--add-host=host.docker.internal:host-gateway` plus explicitly allow-listing the host in `LANGFLOW_SSRF_ALLOWED_HOSTS`.
 - Supabase permission errors (42501) on a table that existed with correct RLS policies — root cause was a missing underlying PostgreSQL `GRANT SELECT` privilege, not the RLS policy itself.
 - Langflow requires `--components-path` (or container recreation with it) for custom components to be discovered — the mount alone isn't enough.
-- Malformed CI workflow on first push — the YAML was duplicated in the editor, producing "workflow file issue" with zero jobs created. Diagnosed via `gh api repos/.../actions/runs/<id>/jobs` (empty array), fixed with a clean rewrite, verified by schema assertion before commit. The broken and fixed commits are both preserved in history.
+- Malformed CI workflow on first push — the YAML was duplicated in the editor, producing "workflow file issue" with zero jobs created. Diagnosed via `gh api repos/.../actions/runs/<id>/jobs` (empty array), fixed with a clean rewrite, verified by schema assertion before commit.
+- Langflow flow not rendering after DB restore across versions — silent frontend failure. The fix is to rebuild the flow in the current UI and export to JSON after every session. Full write-up in [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+- Prometheus target `down` — the monitoring container and the app container were on different Docker networks. Solved by attaching Prometheus to `it-triage-agent_default` so it resolves `app` by service name.
 
 ---
 
@@ -321,22 +385,23 @@ Action taken:        No action (no Jira ticket, no Slack notification).
 
 | Capability | Status |
 |---|---|
-| Severity classification (P1–P4) | ✅ Working |
-| Production vs non-production detection | ✅ Working |
-| Historical incident lookup (Supabase) | ✅ Working |
-| Jira ticket creation | ✅ Working |
-| Slack notification | ✅ Working |
-| Tiered auto-trigger logic | ✅ Working |
-| Flask webhook + `/health` + `/metrics` | ✅ Working |
-| Multi-stage Docker image (non-root, healthcheck) | ✅ Working |
-| Local docker compose stack | ✅ Working |
-| GitHub Actions CI (tests + Docker build) | ✅ Working |
-| Publish image to GHCR (multi-tagged) | ✅ Working |
-| Prometheus scraping | ✅ Working |
-| Grafana dashboards | 🔜 Planned |
-| Runbook / on-call knowledge base | 🔜 Planned |
-| IaC (Terraform) for deployment target | 🔜 Planned |
-| Image vulnerability scanning (Trivy) in CI | 🔜 Planned |
+| Severity classification (P1–P4) | Working |
+| Production vs non-production detection | Working |
+| Historical incident lookup (Supabase) | Working |
+| Jira ticket creation | Working |
+| Slack notification | Working |
+| Tiered auto-trigger logic | Working |
+| Flask webhook + `/health` + `/metrics` | Working |
+| Multi-stage Docker image (non-root, healthcheck) | Working |
+| Local docker compose stack | Working |
+| GitHub Actions CI (tests + Docker build) | Working |
+| Publish image to GHCR (multi-tagged) | Working |
+| Prometheus scraping the app | Working |
+| Automated monitoring start script | Working |
+| Grafana dashboards | Planned |
+| Runbook / on-call knowledge base | Planned |
+| IaC (Terraform) for deployment target | Planned |
+| Image vulnerability scanning (Trivy) in CI | Planned |
 
 ---
 
