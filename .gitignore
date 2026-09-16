@@ -35,3 +35,5 @@ __pycache__/
 .pytest_cache/
 __pycache__/
 backups/
+langflow_data_backup/
+.cache/langflow/
